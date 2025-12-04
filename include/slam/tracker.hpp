@@ -35,8 +35,8 @@ public:
         int   pnp_iterations     = 200;
         float pnp_reprojection   = 4.0f; // pixels (RANSAC threshold)
         int   pnp_min_inliers    = 20;   // minimum PnP inliers to accept pose
-        float init_min_disparity = 15.0f; // min mean 2D disparity (px) before init attempt
-        float init_median_depth  = 10.0f; // target median map-point depth after init (m)
+        float init_min_disparity = 5.0f;  // min mean 2D disparity (px) before init attempt
+        float init_median_depth  = 20.0f; // target median map-point depth after init (m)
     };
 
     using Ptr = std::shared_ptr<Tracker>;
