@@ -132,7 +132,7 @@ void Visualizer::log_frame(const Frame::Ptr& frame)
             all_strips.emplace_back(pts3);
         }
         if (!all_strips.empty()) {
-            rec_->log("world/trajectory",
+            rec_->log("world/camera/trajectory",
                 rerun::archetypes::LineStrips3D(all_strips));
         }
     }
@@ -163,7 +163,7 @@ void Visualizer::log_map(const Map::Ptr& map, double timestamp)
         positions.push_back({(float)p.x(), (float)p.y(), (float)p.z()});
     }
 
-    rec_->log("world/map/points",
+    rec_->log("world/camera/map/points",
         rerun::archetypes::Points3D(positions)
             .with_radii(std::vector<float>(positions.size(), 0.03f))
     );
@@ -180,7 +180,7 @@ void Visualizer::log_ground_truth(const std::vector<std::array<float, 3>>& cente
     for (auto& c : centers)
         pts.push_back({c[0], c[1], c[2]});
 
-    rec_->log_static("world/ground_truth/trajectory",
+    rec_->log_static("world/camera/ground_truth/trajectory",
         rerun::archetypes::LineStrips3D(
             {rerun::components::LineStrip3D(pts)})
             .with_colors({rerun::components::Color(255, 165, 0)}));  // orange
