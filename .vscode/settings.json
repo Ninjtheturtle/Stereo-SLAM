@@ -33,6 +33,7 @@
   },
 
   // ─── Editor settings ─────────────────────────────────────────────────────
+  "files.encoding": "utf8",
   "editor.formatOnSave": true,
   "C_Cpp.clang_format_style": "{ BasedOnStyle: Google, IndentWidth: 4, ColumnLimit: 100 }",
 
