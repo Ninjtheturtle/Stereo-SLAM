@@ -10,14 +10,14 @@ A ground-up stereo Visual SLAM engine in C++17 and CUDA targeting real-time perf
 
 ## Features
 
-- **Stereo metric scale** -- single-frame triangulation gives absolute depth (no scale drift)
-- **GPU-accelerated ORB matching** -- custom CUDA kernel with warp-shuffle reduction; handles stereo epipolar constraints and ratio test natively on-device
-- **Two-phase tracking** -- projection-based spatial search (Phase 1) with GPU Hamming fallback (Phase 2); adaptive search radius scales with predicted rotation
-- **Analytical-Jacobian bundle adjustment** -- Ceres SPARSE_SCHUR, 30-KF sliding window, turn-adaptive Huber loss, pitch/roll soft constraint
-- **Pose-graph optimization** -- co-visibility loop edges, SPARSE_NORMAL_CHOLESKY, runs every 5 keyframes
-- **Robust LOST recovery** -- 8-frame coasting, global relocalization (>=30 PnP inliers), map reset with pose propagation
-- **Trajectory persistence** -- map resets archive old keyframes so the visualization never loses history
-- **Real-time visualization** -- [Rerun 0.22.1](https://rerun.io/) with per-frame camera frustum, keypoints, trajectory, map cloud, and GT overlay
+- Single-frame stereo triangulation for absolute metric depth (no scale drift)
+- Custom CUDA Hamming kernel with warp-shuffle reduction; handles epipolar constraints and ratio test on-device
+- Two-phase tracking: projection-based spatial search with GPU Hamming fallback; search radius adapts to predicted rotation
+- Ceres SPARSE_SCHUR bundle adjustment with analytical Jacobians, 30-KF sliding window, turn-adaptive Huber loss
+- Pose-graph optimization over co-visibility edges, runs every 5 keyframes
+- 8-frame coasting, global relocalization (>=30 PnP inliers), map reset with pose propagation on LOST
+- Map resets archive keyframes into a persistent trajectory history so the visualization never loses its path
+- Real-time 3D visualization via [Rerun 0.22.1](https://rerun.io/)
 
 ---
 
@@ -82,7 +82,7 @@ Metric depth from a single stereo frame: `Z = fx * b / d`. No temporal baseline,
 
 Constant-velocity model predicts the next pose, then two-phase matching builds 3D-2D correspondences. Phase 1 projects the local map point pool onto the predicted pose and searches a spatial grid with radius scaling from 40 to 120 px based on predicted rotation angle. Phase 2 falls back to GPU Hamming with ratio test if Phase 1 comes up short.
 
-PnP-RANSAC (SQPNP, 5.5 px threshold, 15 inlier minimum) refines the pose. Sanity checks reject candidates with delta rotation > 0.5 rad or delta translation > 5 m. A project-and-search pass after PnP pulls in additional map points without a second RANSAC, typically 3-5x more matches.
+PnP-RANSAC (SQPNP, 5.5 px threshold, 15 inlier minimum) refines the pose. Sanity checks reject candidates with delta rotation > 0.5 rad or delta translation > 5 m. A project-and-search pass after PnP pulls in additional map points without a second RANSAC.
 
 After bundle adjustment, the velocity is invalidated so the stale inter-KF delta is never used as a prediction.
 
@@ -126,20 +126,6 @@ The trajectory is rebuilt from the full archive each frame and split into segmen
 
 ---
 
-## Performance
-
-| Metric | Value | Notes |
-|---|---|---|
-| Frame rate | >60 FPS | RTX 3050 laptop, KITTI 1241x376 |
-| Trajectory drift | <1.5% | KITTI seq 00, 3.7 km loop |
-| Feature extraction | ~8 ms | ORB, 2000 features |
-| GPU matching | ~2 ms | CUDA Hamming, 2000x2000 |
-| PnP RANSAC | ~5 ms | SQPNP, 200 iterations |
-| Bundle adjustment | ~30 ms | 30 KFs, SPARSE_SCHUR |
-| Pose graph | ~10 ms | Per 5 KFs, co-visibility edges |
-
----
-
 ## Configuration
 
 All tunable parameters live in `Tracker::Config` ([include/slam/tracker.hpp](include/slam/tracker.hpp)) and `LocalBA::Config` / `PoseGraph::Config` in their respective headers.
@@ -153,7 +139,7 @@ All tunable parameters live in `Tracker::Config` ([include/slam/tracker.hpp](inc
 | `pnp_min_inliers` | 15 | Minimum PnP inliers |
 | `stereo_epi_tol` | 2.0 px | Epipolar band for stereo match |
 | `stereo_d_min` | 3.0 px | Min disparity (~128 m max depth) |
-| `stereo_d_max` | 300.0 px | Max disparity (~0.35 m min depth) |
+| `stereo_d_max` | 300.0 px | Max disparity (~1.3 m min depth) |
 | `kWindowSize` | 30 KFs | Local BA + tracking pool window |
 | `huber_delta` | 1.0 px | BA Huber loss threshold |
 | `pgo_interval` | 5 KFs | How often PGO runs |
@@ -194,7 +180,7 @@ cmake -B build ^
 cmake --build build --config Release
 ```
 
-Rerun SDK (~50 MB) is downloaded automatically on first configure.
+Rerun SDK is downloaded automatically on first configure.
 
 ---
 
